@@ -3,11 +3,18 @@ import { Todo } from '../api/todos'
 interface Props {
   todo: Todo
   onDelete: (id: number) => void
+  onToggle: (id: number, done: boolean) => void
 }
 
-export default function TodoItem({ todo, onDelete }: Props) {
+export default function TodoItem({ todo, onDelete, onToggle }: Props) {
   return (
     <li className="flex items-center gap-3">
+      <input
+        type="checkbox"
+        checked={todo.done}
+        onChange={() => onToggle(todo.id, !todo.done)}
+        className="cursor-pointer"
+      />
       <span className={todo.done ? 'line-through text-gray-400' : 'text-gray-800'}>
         {todo.title}
       </span>

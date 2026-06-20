@@ -3,6 +3,7 @@ package dal
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -33,6 +34,21 @@ func ListTodos(ctx context.Context, db *sql.DB) ([]Todo, error) {
 		return nil, fmt.Errorf("rows error: %w", err)
 	}
 	return todos, nil
+}
+
+func UpdateTodoDone(ctx context.Context, db *sql.DB, id int64, done bool) (*Todo, error) {
+	var t Todo
+	err := db.QueryRowContext(ctx,
+		`UPDATE todos SET done = $1 WHERE id = $2 RETURNING id, title, done, created_at`,
+		done, id,
+	).Scan(&t.ID, &t.Title, &t.Done, &t.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, sql.ErrNoRows
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update todo done: %w", err)
+	}
+	return &t, nil
 }
 
 func DeleteTodo(ctx context.Context, db *sql.DB, id int64) error {

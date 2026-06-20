@@ -1,10 +1,12 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -85,6 +87,69 @@ func TestListTodosHandler_DBError(t *testing.T) {
 		t.Errorf("expected 'error' key in response body")
 	}
 
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestUpdateTodoDoneHandler_HappyPath(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now()
+	mock.ExpectQuery(`UPDATE todos SET done = \$1 WHERE id = \$2 RETURNING id, title, done, created_at`).
+		WithArgs(true, int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "done", "created_at"}).
+			AddRow(1, "Buy groceries", true, now))
+
+	r := gin.New()
+	r.PATCH("/api/todos/:id/done", UpdateTodoDone(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/api/todos/1/done", strings.NewReader(`{"done":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var todo map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &todo); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if todo["done"] != true {
+		t.Errorf("expected done=true, got %v", todo["done"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestUpdateTodoDoneHandler_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery(`UPDATE todos SET done = \$1 WHERE id = \$2 RETURNING id, title, done, created_at`).
+		WithArgs(true, int64(99)).
+		WillReturnError(sql.ErrNoRows)
+
+	r := gin.New()
+	r.PATCH("/api/todos/:id/done", UpdateTodoDone(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPatch, "/api/todos/99/done", strings.NewReader(`{"done":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled mock expectations: %v", err)
 	}

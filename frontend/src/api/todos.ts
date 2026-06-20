@@ -10,3 +10,6 @@ export interface Todo {
 export const fetchTodos = () => api.get<Todo[]>('/todos')
 
 export const deleteTodo = (id: number) => api.delete<void>('/todos/' + id)
+
+export const updateTodoDone = (id: number, done: boolean) =>
+  api.patch<Todo>('/todos/' + id + '/done', { done })

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchTodos, deleteTodo, Todo } from '../api/todos'
+import { fetchTodos, deleteTodo, updateTodoDone, Todo } from '../api/todos'
 import TodoItem from './TodoItem'
 
 export default function TodoList() {
@@ -19,6 +19,15 @@ export default function TodoList() {
     },
   })
 
+  const { mutate: handleToggle } = useMutation({
+    mutationFn: ({ id, done }: { id: number; done: boolean }) => updateTodoDone(id, done),
+    onSuccess: (updated: Todo) => {
+      queryClient.setQueryData<Todo[]>(['todos'], (prev: Todo[] | undefined) =>
+        (prev ?? []).map((t: Todo) => (t.id === updated.id ? updated : t)),
+      )
+    },
+  })
+
   if (error) {
     return <p className="text-red-500">{(error as Error).message}</p>
   }
@@ -26,7 +35,7 @@ export default function TodoList() {
   return (
     <ul className="space-y-3">
       {todos && todos.map((todo: Todo) => (
-        <TodoItem key={todo.id} todo={todo} onDelete={handleDelete} />
+        <TodoItem key={todo.id} todo={todo} onDelete={handleDelete} onToggle={(id, done) => handleToggle({ id, done })} />
       ))}
     </ul>
   )

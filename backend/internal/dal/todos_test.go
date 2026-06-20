@@ -101,4 +101,49 @@ func TestDeleteTodo_NotFound(t *testing.T) {
 	}
 }
 
+func TestUpdateTodoDone_HappyPath(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now()
+	mock.ExpectQuery(`UPDATE todos SET done = \$1 WHERE id = \$2 RETURNING id, title, done, created_at`).
+		WithArgs(true, int64(1)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "done", "created_at"}).
+			AddRow(1, "Buy groceries", true, now))
+
+	todo, err := UpdateTodoDone(context.Background(), db, 1, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if todo.ID != 1 || todo.Done != true {
+		t.Errorf("unexpected todo: %+v", todo)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestUpdateTodoDone_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery(`UPDATE todos SET done = \$1 WHERE id = \$2 RETURNING id, title, done, created_at`).
+		WithArgs(true, int64(99)).
+		WillReturnError(sql.ErrNoRows)
+
+	_, err = UpdateTodoDone(context.Background(), db, 99, true)
+	if err != sql.ErrNoRows {
+		t.Fatalf("expected sql.ErrNoRows, got %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
 var errQueryFailed = fmt.Errorf("connection refused")
