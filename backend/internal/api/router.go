@@ -1,10 +1,9 @@
-package router
+package api
 
 import (
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
-	"fsa-boilerplate/backend/internal/handlers"
 )
 
 func New(db *sql.DB) *gin.Engine {
@@ -12,8 +11,8 @@ func New(db *sql.DB) *gin.Engine {
 
 	api := r.Group("/api")
 	{
-		api.GET("/health", handlers.Health)
-		// Add routes here
+		api.GET("/health", Health)
+		api.GET("/todos", ListTodos(db))
 	}
 
 	return r

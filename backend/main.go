@@ -3,25 +3,25 @@ package main
 import (
 	"log"
 
+	"fsa-boilerplate/backend/internal/api"
 	"fsa-boilerplate/backend/internal/config"
-	"fsa-boilerplate/backend/internal/db"
-	"fsa-boilerplate/backend/internal/router"
+	"fsa-boilerplate/backend/internal/dal"
 )
 
 func main() {
 	cfg := config.Load()
 
-	database, err := db.Connect(cfg.DatabaseURL)
+	database, err := dal.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer database.Close()
 
-	if err := db.RunMigrations(database); err != nil {
+	if err := dal.RunMigrations(database); err != nil {
 		log.Fatalf("failed to run migrations: %v", err)
 	}
 
-	r := router.New(database)
+	r := api.New(database)
 
 	port := cfg.Port
 	if port == "" {
