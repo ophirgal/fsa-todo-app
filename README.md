@@ -1,6 +1,6 @@
-# FSA Boilerplate
+# TODO App
 
-Full-stack application boilerplate for AI-assisted coding interviews (60–90 min).
+A simple full-stack TODO application.
 
 **Stack:** Go + Gin · React + TypeScript + TailwindCSS · PostgreSQL · Nginx · Docker Compose
 
@@ -56,7 +56,7 @@ Both the backend (Air) and frontend (Vite) support hot reload — file saves are
 ## Project Structure
 
 ```
-fsa-boilerplate/
+fsa-todo-app/
 ├── backend/
 │   ├── internal/
 │   │   ├── config/      # env var loading
@@ -81,31 +81,32 @@ fsa-boilerplate/
 
 **1. Migration** — `backend/migrations/002_<name>.sql`
 ```sql
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS todos (
     id         BIGSERIAL PRIMARY KEY,
-    name       TEXT        NOT NULL,
+    title      TEXT        NOT NULL,
+    done       BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-**2. Handler** — `backend/internal/handlers/items.go`
+**2. Handler** — `backend/internal/handlers/todos.go`
 ```go
-func ListItems(c *gin.Context) { ... }
-func CreateItem(c *gin.Context) { ... }
+func ListTodos(c *gin.Context) { ... }
+func CreateTodo(c *gin.Context) { ... }
 ```
 
 **3. Route** — add to `backend/internal/router/router.go`
 ```go
-api.GET("/items", handlers.ListItems)
-api.POST("/items", handlers.CreateItem)
+api.GET("/todos", handlers.ListTodos)
+api.POST("/todos", handlers.CreateTodo)
 ```
 
 **4. API call** — `frontend/src/api/client.ts` is pre-wired
 ```ts
-const items = await api.get<Item[]>('/items')
+const todos = await api.get<Todo[]>('/todos')
 ```
 
-**5. Page** — `frontend/src/pages/ItemsPage.tsx`
+**5. Page** — `frontend/src/pages/TodosPage.tsx`
 
 ---
 

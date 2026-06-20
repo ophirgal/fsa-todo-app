@@ -1,6 +1,6 @@
 # Project Context
 
-This is a full-stack web application built for a coding interview. The goal is to implement the required features as quickly and cleanly as possible.
+This is a simple full-stack TODO application.
 
 ## Stack
 
@@ -42,7 +42,7 @@ Both backend (Air) and frontend (Vite) hot-reload on file save. No container res
 |---|---|
 | `backend/main.go` | Entry point: load config, connect DB, run migrations, start server |
 | `backend/internal/router/router.go` | All route registrations go here |
-| `backend/internal/handlers/` | One file per resource (e.g., `items.go`) |
+| `backend/internal/handlers/` | One file per resource (e.g., `todos.go`) |
 | `backend/internal/db/db.go` | `Connect()` and `RunMigrations()` |
 | `backend/migrations/` | SQL files run in alphabetical order at startup |
 | `frontend/src/api/client.ts` | Pre-wired fetch wrapper — base URL is `/api` |
@@ -54,16 +54,17 @@ Both backend (Air) and frontend (Vite) hot-reload on file save. No container res
 ### 1. Migration
 Create `backend/migrations/NNN_<name>.sql` (NNN = next number):
 ```sql
-CREATE TABLE IF NOT EXISTS items (
+CREATE TABLE IF NOT EXISTS todos (
     id         BIGSERIAL PRIMARY KEY,
-    name       TEXT        NOT NULL,
+    title      TEXT        NOT NULL,
+    done       BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 Migrations run automatically on next backend start.
 
 ### 2. Handler
-Create `backend/internal/handlers/items.go`:
+Create `backend/internal/handlers/todos.go`:
 ```go
 package handlers
 
@@ -73,16 +74,16 @@ import (
     "github.com/gin-gonic/gin"
 )
 
-func ListItems(db *sql.DB) gin.HandlerFunc {
+func ListTodos(db *sql.DB) gin.HandlerFunc {
     return func(c *gin.Context) {
-        rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name, created_at FROM items ORDER BY id`)
+        rows, err := db.QueryContext(c.Request.Context(), `SELECT id, title, done, created_at FROM todos ORDER BY id`)
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
             return
         }
         defer rows.Close()
         // scan rows...
-        c.JSON(http.StatusOK, items)
+        c.JSON(http.StatusOK, todos)
     }
 }
 ```
@@ -90,8 +91,8 @@ func ListItems(db *sql.DB) gin.HandlerFunc {
 ### 3. Route
 In `backend/internal/router/router.go`, add inside the `api` group:
 ```go
-api.GET("/items", handlers.ListItems(db))
-api.POST("/items", handlers.CreateItem(db))
+api.GET("/todos", handlers.ListTodos(db))
+api.POST("/todos", handlers.CreateTodo(db))
 ```
 
 Pass `db *sql.DB` to `router.New()` — it already receives it.
@@ -99,18 +100,18 @@ Pass `db *sql.DB` to `router.New()` — it already receives it.
 ### 4. Frontend API call
 `frontend/src/api/client.ts` is pre-wired. Use it directly:
 ```ts
-const items = await api.get<Item[]>('/items')
-await api.post('/items', { name: 'example' })
+const todos = await api.get<Todo[]>('/todos')
+await api.post('/todos', { title: 'example' })
 ```
 
 ### 5. Page
-Create `frontend/src/pages/ItemsPage.tsx` and add it to the router in `App.tsx`.
+Create `frontend/src/pages/TodosPage.tsx` and add it to the router in `App.tsx`.
 
 ## Database Conventions
 
 - All tables use `BIGSERIAL` primary keys named `id`
 - Timestamps use `TIMESTAMPTZ` with `DEFAULT NOW()`
-- Migration files: `NNN_description.sql` (e.g., `002_add_items.sql`)
+- Migration files: `NNN_description.sql` (e.g., `002_add_todos.sql`)
 - Use `IF NOT EXISTS` guards so migrations are idempotent
 
 ## Environment Variables
@@ -129,6 +130,8 @@ Module name: `fsa-boilerplate/backend`
 
 Import paths follow `fsa-boilerplate/backend/internal/<package>`.
 
+> Note: The Go module name remains `fsa-boilerplate/backend` for historical reasons — use this exact string in all import paths.
+
 ## Tailwind
 
 Classes are available everywhere in `src/`. No configuration needed — just use utility classes. Common patterns:
@@ -137,3 +140,8 @@ Classes are available everywhere in `src/`. No configuration needed — just use
 - Typography: `text-xl font-bold text-gray-900`
 - Colors: `bg-white`, `text-gray-500`, `border-gray-200`
 - Interactive: `hover:bg-blue-600`, `focus:outline-none focus:ring-2`
+
+## General Coding Guidelines
+- When adding code for a new feature, make minimal changes needed to implement the feature while still sticking to good practices (e.g. do not hardcode things just because it's more minimal). 
+- Do not overengineer and add more files than are needed for the feature.
+- For backend features, write tests first and use those to validate the feature's implementation (TDD). One happy path test and one error case test is good enough, no need to go crazy with tests.
