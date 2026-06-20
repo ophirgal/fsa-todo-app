@@ -51,6 +51,18 @@ func UpdateTodoDone(ctx context.Context, db *sql.DB, id int64, done bool) (*Todo
 	return &t, nil
 }
 
+func CreateTodo(ctx context.Context, db *sql.DB, title string) (*Todo, error) {
+	var t Todo
+	err := db.QueryRowContext(ctx,
+		`INSERT INTO todos (title) VALUES ($1) RETURNING id, title, done, created_at`,
+		title,
+	).Scan(&t.ID, &t.Title, &t.Done, &t.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create todo: %w", err)
+	}
+	return &t, nil
+}
+
 func DeleteTodo(ctx context.Context, db *sql.DB, id int64) error {
 	result, err := db.ExecContext(ctx, `DELETE FROM todos WHERE id = $1`, id)
 	if err != nil {

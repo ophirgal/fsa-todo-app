@@ -146,4 +146,49 @@ func TestUpdateTodoDone_NotFound(t *testing.T) {
 	}
 }
 
+func TestCreateTodo_HappyPath(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now()
+	mock.ExpectQuery(`INSERT INTO todos \(title\) VALUES \(\$1\) RETURNING id, title, done, created_at`).
+		WithArgs("Buy milk").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "done", "created_at"}).
+			AddRow(1, "Buy milk", false, now))
+
+	todo, err := CreateTodo(context.Background(), db, "Buy milk")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if todo.ID != 1 || todo.Title != "Buy milk" || todo.Done != false {
+		t.Errorf("unexpected todo: %+v", todo)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestCreateTodo_DBError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery(`INSERT INTO todos \(title\) VALUES \(\$1\) RETURNING id, title, done, created_at`).
+		WithArgs("Buy milk").
+		WillReturnError(errQueryFailed)
+
+	_, err = CreateTodo(context.Background(), db, "Buy milk")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
 var errQueryFailed = fmt.Errorf("connection refused")

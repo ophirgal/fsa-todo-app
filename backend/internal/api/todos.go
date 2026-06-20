@@ -11,6 +11,28 @@ import (
 	"fsa-boilerplate/backend/internal/dal"
 )
 
+func CreateTodo(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body struct {
+			Title string `json:"title"`
+		}
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+			return
+		}
+		if body.Title == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
+			return
+		}
+		todo, err := dal.CreateTodo(c.Request.Context(), db, body.Title)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, todo)
+	}
+}
+
 func ListTodos(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		todos, err := dal.ListTodos(c.Request.Context(), db)

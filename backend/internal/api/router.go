@@ -12,6 +12,7 @@ func New(db *sql.DB) *gin.Engine {
 	api := r.Group("/api")
 	{
 		api.GET("/health", Health)
+		api.POST("/todos", CreateTodo(db))
 		api.GET("/todos", ListTodos(db))
 		api.PATCH("/todos/:id/done", UpdateTodoDone(db))
 		api.DELETE("/todos/:id", DeleteTodo(db))

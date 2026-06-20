@@ -18,6 +18,69 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
+func TestCreateTodoHandler_HappyPath(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	now := time.Now()
+	mock.ExpectQuery(`INSERT INTO todos \(title\) VALUES \(\$1\) RETURNING id, title, done, created_at`).
+		WithArgs("Buy milk").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "title", "done", "created_at"}).
+			AddRow(1, "Buy milk", false, now))
+
+	r := gin.New()
+	r.POST("/api/todos", CreateTodo(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(`{"title":"Buy milk"}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+	var todo map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &todo); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if todo["title"] != "Buy milk" {
+		t.Errorf("unexpected title: %v", todo["title"])
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestCreateTodoHandler_EmptyTitle(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	r := gin.New()
+	r.POST("/api/todos", CreateTodo(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/todos", strings.NewReader(`{"title":""}`))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if _, ok := body["error"]; !ok {
+		t.Errorf("expected 'error' key in response body")
+	}
+}
+
 func TestListTodosHandler_HappyPath(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

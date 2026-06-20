@@ -141,6 +141,9 @@ Classes are available everywhere in `src/`. No configuration needed — just use
 - Colors: `bg-white`, `text-gray-500`, `border-gray-200`
 - Interactive: `hover:bg-blue-600`, `focus:outline-none focus:ring-2`
 
+## Autonomy
+- When asked to implement a plan, execute it fully end-to-end — including running tests and verification — without asking for permission at each step.
+
 ## General Coding Guidelines
 - When adding code for a new feature, make minimal changes needed to implement the feature while still sticking to good practices (e.g. do not hardcode things just because it's more minimal). 
 - Do not overengineer and add more files than are needed for the feature.
