@@ -34,3 +34,15 @@ func ListTodos(ctx context.Context, db *sql.DB) ([]Todo, error) {
 	}
 	return todos, nil
 }
+
+func DeleteTodo(ctx context.Context, db *sql.DB, id int64) error {
+	result, err := db.ExecContext(ctx, `DELETE FROM todos WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete todo: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}

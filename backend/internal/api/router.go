@@ -13,6 +13,7 @@ func New(db *sql.DB) *gin.Engine {
 	{
 		api.GET("/health", Health)
 		api.GET("/todos", ListTodos(db))
+		api.DELETE("/todos/:id", DeleteTodo(db))
 	}
 
 	return r

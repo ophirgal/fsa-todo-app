@@ -89,3 +89,55 @@ func TestListTodosHandler_DBError(t *testing.T) {
 		t.Errorf("unfulfilled mock expectations: %v", err)
 	}
 }
+
+func TestDeleteTodoHandler_HappyPath(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec(`DELETE FROM todos WHERE id = \$1`).
+		WithArgs(int64(1)).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	r := gin.New()
+	r.DELETE("/api/todos/:id", DeleteTodo(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/todos/1", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", w.Code)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
+
+func TestDeleteTodoHandler_NotFound(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to create sqlmock: %v", err)
+	}
+	defer db.Close()
+
+	mock.ExpectExec(`DELETE FROM todos WHERE id = \$1`).
+		WithArgs(int64(99)).
+		WillReturnResult(sqlmock.NewResult(0, 0))
+
+	r := gin.New()
+	r.DELETE("/api/todos/:id", DeleteTodo(db))
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodDelete, "/api/todos/99", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", w.Code)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("unfulfilled mock expectations: %v", err)
+	}
+}
